@@ -90,7 +90,7 @@ class Window:
         self.__text_offset = 0
         self.__display_lines = 0
         self.__next_line = 0
-        self.__scroll_to = -1
+        self.__scroll_to = 0
 
     @property
     def model(self):
@@ -113,9 +113,9 @@ class Window:
             elif ch == curses.KEY_END:
                 self.__move_end__()
             elif ch == curses.KEY_PPAGE:
-                self.__scroll_previous()
+                self.__scroll_up__()
             elif ch == curses.KEY_NPAGE:
-                self.__scroll_next()
+                self.__scroll_down__()
         else:
             if ch == "\u007f":
                 self.__backspace__()
@@ -231,11 +231,19 @@ class Window:
         self.__bottom.move(0, self.__text_pos)
         self.__refresh_bottom__(force=True)
 
-    def __scroll_previous(self):
-        pass
+    def __scroll_up__(self):
+        if self.__scroll_to < self.__display_lines - (self.__y - 2):
+            self.__scroll_to += 1
 
-    def __scroll_next(self):
-        pass
+            self.__refresh_lines__(force=True)
+            self.__refresh_bottom__(force=True)
+
+    def __scroll_down__(self):
+        if self.__scroll_to > 0:
+            self.__scroll_to -= 1
+
+            self.__refresh_lines__(force=True)
+            self.__refresh_bottom__(force=True)
 
     def refresh(self):
         force = self.__draw_screen
@@ -270,8 +278,10 @@ class Window:
 
             self.__lines = curses.newpad(20, self.__x)
             self.__lines.bkgd(' ', curses.color_pair(ui.COLORS_MESSAGE))
+
             self.__display_lines = 0
             self.__next_line = 0
+            self.__scroll_to = 0
 
             self.__bottom = curses.newwin(1, self.__x, self.__y - 1, 0)
             self.__bottom.bkgd(' ', curses.color_pair(ui.COLORS_INPUT))
@@ -304,6 +314,8 @@ class Window:
 
             max_y, max_x = self.__lines.getmaxyx()
 
+            old_lines = self.__display_lines
+
             for timestamp, message_type, fields in self.__model.messages[self.__next_line:]:
                 if self.__display_lines >= max_y:
                     max_y *= 2
@@ -333,12 +345,15 @@ class Window:
 
                 self.__next_line += 1
 
-            if self.__scroll_to == -1:
-                scroll_to = self.__display_lines - self.__y + 2 - self.__scroll_to
+            if self.__scroll_to == 0:
+                scroll_to = self.__display_lines - self.__y + 2
 
                 self.__lines.refresh(scroll_to, 0, 1, 0, self.__y - 2, self.__x)
             else:
-                self.__lines.refresh(self.__scroll_to, 0, 1, 0, self.__y - 2, self.__x)
+                self.__scroll_to += self.__display_lines - old_lines
+                scroll_to = self.__display_lines - self.__y + 2 - self.__scroll_to
+
+                self.__lines.refresh(scroll_to, 0, 1, 0, self.__y - 2, self.__x)
 
         return refreshed
 
