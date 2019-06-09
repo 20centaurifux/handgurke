@@ -43,9 +43,10 @@ class Ui:
         self.__stdscr = curses.initscr()
 
         curses.noecho()
+        curses.curs_set(True)
 
         self.__stdscr.keypad(True)
-        self.__stdscr.timeout(250)
+        self.__stdscr.timeout(500)
 
         curses.start_color()
 

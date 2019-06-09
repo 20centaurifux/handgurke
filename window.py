@@ -82,9 +82,6 @@ class ViewModel:
         self.__message_count = len(self.__messages)
 
 class Window:
-    CLEAR_ALL = 0
-    NO_CLEAR = 1
-
     def __init__(self, stdscr, model: ViewModel):
         self.__model = model
         self.__stdscr = stdscr
@@ -145,6 +142,10 @@ class Window:
             else:
                 self.__text_pos -= 1
 
+        self.__refresh_bottom__(force=True)
+
+        self.__model.sync()
+
     def __delete_char__(self):
         index = self.__text_offset + self.__text_pos
 
@@ -162,7 +163,7 @@ class Window:
         else:
             self.__text_pos += 1
 
-        self.__refresh_bottom__(force=True, clear_mode=Window.NO_CLEAR)
+        self.__refresh_bottom__(force=True)
 
         self.__model.sync()
 
@@ -189,7 +190,9 @@ class Window:
                     self.__text_pos += self.__text_offset
                     self.__text_offset = 0
 
-                self.__refresh_bottom__(force=True)
+            self.__refresh_bottom__(force=True)
+
+            self.__model.sync()
 
     def __move_left__(self):
         if self.__text_pos > 0:
@@ -436,18 +439,21 @@ class Window:
 
         return "".join(parts)
 
-    def __refresh_bottom__(self, force, clear_mode=CLEAR_ALL):
+    def __refresh_bottom__(self, force):
         if self.__model.text_changed or force:
-            if clear_mode == Window.CLEAR_ALL:
-                self.__bottom.clear()
-
             text = self.__model.text[self.__text_offset:]
             text = text[:self.__x - 1]
 
-            if self.__text_pos + self.__text_offset > len(text):
-                self.__text_offset = 0
-                self.__text_pos = len(text)
+            text_len = len(text)
+
+            text = text + " " * (self.__x - len(text) - 1)
 
             self.__bottom.addstr(0, 0, text)
+
+            if self.__text_pos + self.__text_offset > text_len:
+                self.__text_offset = 0
+                self.__text_pos = text_len
+
             self.__bottom.move(0, self.__text_pos)
+
             self.__bottom.refresh()
