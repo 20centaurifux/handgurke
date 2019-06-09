@@ -70,7 +70,7 @@ class Ui:
 
 class KeyReader:
     def __init__(self, stdscr):
-        self.__loop = asyncio.get_running_loop()
+        self.__loop = asyncio.get_event_loop()
         self.__stdscr = stdscr
         self.__worker = threading.Thread(target=self.__read_char__)
         self.__queue = asyncio.Queue()
