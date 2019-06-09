@@ -1,0 +1,161 @@
+"""
+    project............: Handgurke
+    description........: ICB client
+    date...............: 06/2019
+    copyright..........: Sebastian Fedrau
+
+    Permission is hereby granted, free of charge, to any person obtaining
+    a copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+    OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+    OTHER DEALINGS IN THE SOFTWARE.
+"""
+import asyncio
+from datetime import datetime
+import re
+import getopt
+import getpass
+import sys
+import ui
+import window
+import client
+
+def get_opts(argv):
+    options, _ = getopt.getopt(argv, 's:p:n:g:', ['server=', 'port=', 'nick=', 'group='])
+    m = {}
+
+    for opt, arg in options:
+        if opt in ('-s', '--server'):
+            m["server"] = arg
+        elif opt in ('-p', '--port'):
+            m["port"] = int(arg)
+        elif opt in ('-n', '--nick'):
+            m["nick"] = arg
+        elif opt in ('-g', '--group'):
+            m["group"] = arg
+
+    if not m.get("server"):
+        m["server"] = "internetcitizens.band"
+
+    if not m.get("port"):
+        m["port"] = 7326
+
+    m["loginid"] = getpass.getuser()
+
+    if not m.get("nick"):
+        m["nick"] = m["loginid"]
+
+    if not m.get("group"):
+        m["group"] = ""
+
+    return m
+
+async def run():
+    opts = get_opts(sys.argv[1:])
+
+    icb_client = client.Client(opts["server"], opts["port"])
+
+    connection = await icb_client.connect()
+
+    icb_client.login(opts["loginid"], opts["nick"], opts["group"])
+
+    with ui.Ui() as stdscr:
+        model = window.ViewModel()
+
+        model.title = "Handgurke"
+
+        w = window.Window(stdscr, model)
+
+        with ui.KeyReader(stdscr) as queue:
+            icb_client.command("echoback", "verbose")
+            icb_client.command("topic")
+
+            client_f = asyncio.ensure_future(icb_client.read())
+            input_f = asyncio.ensure_future(queue.get())
+            sleep_f = asyncio.ensure_future(asyncio.sleep(5))
+
+            group = ""
+            topic = ""
+
+            while not connection.done():
+                if topic:
+                    model.title = "%s: %s" % (group, topic)
+                else:
+                    model.title = group
+
+                w.refresh()
+
+                done, _ = await asyncio.wait([client_f, input_f, sleep_f], return_when=asyncio.FIRST_COMPLETED)
+
+                for f in done:
+                    if f is client_f:
+                        message_type, fields = f.result()
+
+                        if message_type == "l":
+                            icb_client.pong()
+                        elif message_type in "bcdefki":
+                            model.append_message(datetime.now(), message_type, fields)
+
+                            if message_type == "d" and fields[0] == "Status":
+                                m = re.match(r"^You are now in group ([^\s]+).*", fields[1])
+
+                                if m:
+                                    group = m.group(1)
+                                    topic = ""
+                            if message_type == "d" and fields[0] == "Topic":
+                                m = re.match(r".*changed the topic to \"(\w+)\".*", fields[1])
+
+                                if m and m.group(1) != "(None)":
+                                    topic = m.group(1)
+                            elif message_type == "i" and fields[0] == "co":
+                                m = re.match(r".*Topic: (.*)$", fields[1])
+
+                                if not m:
+                                    m = re.match(r".*The topic is: (.*)$", fields[1])
+
+                                if m:
+                                    topic = m.group(1)
+
+                        client_f = asyncio.ensure_future(icb_client.read())
+                    elif f is input_f:
+                        ch = f.result()
+
+                        if ch == "\n":
+                            line = model.text.strip()
+
+                            if line.startswith("/"):
+                                parts = line.split(" ", 1)
+
+                                if len(parts[0]) > 1:
+                                    icb_client.command(parts[0][1:], parts[1] if len(parts) > 1 else "")
+
+                                if parts[0] == "/g" and len(parts) == 2:
+                                    icb_client.command("topic")
+                            else:
+                                icb_client.open_message(line)
+
+                            model.text = ""
+                        else:
+                            w.send_key(ch)
+
+                        input_f = asyncio.ensure_future(queue.get())
+                    elif f is sleep_f:
+                        sleep_f = asyncio.ensure_future(asyncio.sleep(5))
+
+        await asyncio.sleep(5)
+
+if __name__ == "__main__":
+    asyncio.run(run())
