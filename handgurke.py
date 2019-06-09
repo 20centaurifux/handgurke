@@ -73,7 +73,7 @@ def parse_message(message_type, fields):
             result["group"] = m.group(1)
             result["topic"] = ""
     if message_type == "d" and fields[0] == "Topic":
-        m = re.match(r".*changed the topic to \"(\w+)\".*", fields[1])
+        m = re.match(r".*changed the topic to \"([\s\w]+)\".*", fields[1])
 
         if m and m.group(1) != "(None)":
             result["topic"] = m.group(1)
