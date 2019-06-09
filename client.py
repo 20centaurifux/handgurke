@@ -48,7 +48,7 @@ class ICBClientProtocol(asyncio.Protocol):
         self.__shutdown__(ex)
 
     def __shutdown__(self, ex=None):
-        self.__on_conn_lost.set_result(ex)
+        self.__on_conn_lost.set_result(ex if ex else 0)
 
     def __message_received__(self, type_id, payload):
         self.__queue.put_nowait((type_id, payload))
@@ -59,15 +59,16 @@ class Client:
         self.__port = port
         self.__queue = asyncio.Queue()
         self.__transport = None
+        self.__protocol = None
 
     async def connect(self):
         loop = asyncio.get_event_loop()
 
         on_conn_lost = loop.create_future()
 
-        self.__transport, _ = await loop.create_connection(lambda: ICBClientProtocol(on_conn_lost, self.__queue),
-                                                           self.__host,
-                                                           self.__port)
+        self.__transport, self.__protocol = await loop.create_connection(lambda: ICBClientProtocol(on_conn_lost, self.__queue),
+                                                                         self.__host,
+                                                                         self.__port)
 
         return on_conn_lost
 
@@ -103,3 +104,6 @@ class Client:
             self.__transport.close()
 
         return t, [f.decode("UTF-8").rstrip(" \0") for f in ltd.split(p)]
+
+    def quit(self):
+        self.__transport.close()

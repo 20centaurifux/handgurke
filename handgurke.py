@@ -63,6 +63,43 @@ def get_opts(argv):
 
     return m
 
+def parse_message(message_type, fields):
+    result = {}
+
+    if message_type == "d" and fields[0] == "Status":
+        m = re.match(r"^You are now in group ([^\s]+).*", fields[1])
+
+        if m:
+            result["group"] = m.group(1)
+            result["topic"] = ""
+    if message_type == "d" and fields[0] == "Topic":
+        m = re.match(r".*changed the topic to \"(\w+)\".*", fields[1])
+
+        if m and m.group(1) != "(None)":
+            result["topic"] = m.group(1)
+    elif message_type == "i" and fields[0] == "co":
+        m = re.match(r".*Topic: (.*)$", fields[1])
+
+        if not m:
+            m = re.match(r".*The topic is: (.*)$", fields[1])
+
+        if m:
+            result["topic"] = m.group(1)
+
+    return result
+
+def send_line(client, line):
+    if line.startswith("/"):
+        parts = line.split(" ", 1)
+
+        if len(parts[0]) > 1:
+            client.command(parts[0][1:], parts[1] if len(parts) > 1 else "")
+
+        if parts[0] == "/g" and len(parts) == 2:
+            client.command("topic")
+    else:
+        client.open_message(line)
+
 async def run():
     opts = get_opts(sys.argv[1:])
 
@@ -85,7 +122,7 @@ async def run():
 
             client_f = asyncio.ensure_future(icb_client.read())
             input_f = asyncio.ensure_future(queue.get())
-            sleep_f = asyncio.ensure_future(asyncio.sleep(5))
+            sleep_f = asyncio.ensure_future(asyncio.sleep(1))
 
             group = ""
             topic = ""
@@ -109,25 +146,10 @@ async def run():
                         elif message_type in "bcdefki":
                             model.append_message(datetime.now(), message_type, fields)
 
-                            if message_type == "d" and fields[0] == "Status":
-                                m = re.match(r"^You are now in group ([^\s]+).*", fields[1])
+                            m = parse_message(message_type, fields)
 
-                                if m:
-                                    group = m.group(1)
-                                    topic = ""
-                            if message_type == "d" and fields[0] == "Topic":
-                                m = re.match(r".*changed the topic to \"(\w+)\".*", fields[1])
-
-                                if m and m.group(1) != "(None)":
-                                    topic = m.group(1)
-                            elif message_type == "i" and fields[0] == "co":
-                                m = re.match(r".*Topic: (.*)$", fields[1])
-
-                                if not m:
-                                    m = re.match(r".*The topic is: (.*)$", fields[1])
-
-                                if m:
-                                    topic = m.group(1)
+                            group = m.get("group", group)
+                            topic = m.get("topic", topic)
 
                         client_f = asyncio.ensure_future(icb_client.read())
                     elif f is input_f:
@@ -136,16 +158,10 @@ async def run():
                         if ch == "\n":
                             line = model.text.strip()
 
-                            if line.startswith("/"):
-                                parts = line.split(" ", 1)
-
-                                if len(parts[0]) > 1:
-                                    icb_client.command(parts[0][1:], parts[1] if len(parts) > 1 else "")
-
-                                if parts[0] == "/g" and len(parts) == 2:
-                                    icb_client.command("topic")
+                            if line == "/quit":
+                                icb_client.quit()
                             else:
-                                icb_client.open_message(line)
+                                send_line(icb_client, line)
 
                             model.text = ""
                         else:
@@ -153,12 +169,11 @@ async def run():
 
                         input_f = asyncio.ensure_future(queue.get())
                     elif f is sleep_f:
-                        sleep_f = asyncio.ensure_future(asyncio.sleep(5))
-
-        await asyncio.sleep(5)
+                        sleep_f = asyncio.ensure_future(asyncio.sleep(1))
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
     loop.run_until_complete(run())
-    asyncio.run(run())
+
+    print("Connection closed.")
