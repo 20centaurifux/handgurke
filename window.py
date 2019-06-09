@@ -41,7 +41,8 @@ class ViewModel:
 
     @title.setter
     def title(self, value):
-        self.__title = (True, value)
+        if value != self.__title[1]:
+            self.__title = (True, value)
 
     @property
     def title_changed(self):
@@ -53,7 +54,8 @@ class ViewModel:
 
     @text.setter
     def text(self, value):
-        self.__text = (True, value)
+        if value != self.__text[1]:
+            self.__text = (True, value)
 
     @property
     def text_changed(self):
@@ -80,6 +82,9 @@ class ViewModel:
         self.__message_count = len(self.__messages)
 
 class Window:
+    CLEAR_ALL = 0
+    NO_CLEAR = 1
+
     def __init__(self, stdscr, model: ViewModel):
         self.__model = model
         self.__stdscr = stdscr
@@ -126,7 +131,7 @@ class Window:
                     self.__move_end__()
                 elif key_name == "^W":
                     self.__delete_word__()
-                else:
+                elif ord(ch) != 0:
                     self.__insert_char__(ch)
 
     def __backspace__(self):
@@ -156,6 +161,10 @@ class Window:
             self.__text_offset += 1
         else:
             self.__text_pos += 1
+
+        self.__refresh_bottom__(force=True, clear_mode=Window.NO_CLEAR)
+
+        self.__model.sync()
 
     def __delete_word__(self):
         index = self.__text_offset + self.__text_pos
@@ -427,9 +436,10 @@ class Window:
 
         return "".join(parts)
 
-    def __refresh_bottom__(self, force):
+    def __refresh_bottom__(self, force, clear_mode=CLEAR_ALL):
         if self.__model.text_changed or force:
-            self.__bottom.clear()
+            if clear_mode == Window.CLEAR_ALL:
+                self.__bottom.clear()
 
             text = self.__model.text[self.__text_offset:]
             text = text[:self.__x - 1]
