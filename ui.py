@@ -45,7 +45,7 @@ class Ui:
         curses.noecho()
 
         self.__stdscr.keypad(True)
-        self.__stdscr.nodelay(True)
+        self.__stdscr.timeout(500)
 
         curses.start_color()
 

@@ -113,8 +113,6 @@ async def run():
     with ui.Ui() as stdscr:
         model = window.ViewModel()
 
-        model.title = "Handgurke"
-
         w = window.Window(stdscr, model)
 
         skip_refresh = 0
