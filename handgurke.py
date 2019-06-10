@@ -34,6 +34,7 @@ import curses
 import ui
 import window
 import client
+import beat
 
 def get_opts(argv):
     options, _ = getopt.getopt(argv, 's:p:n:g:SN', ["server=", "port=", "nick=", "group=", "ssl", "no-verify"])
@@ -84,7 +85,7 @@ def parse_message(message_type, fields):
         if not m:
             m = re.match(r".*The topic is: (.*)$", fields[1])
 
-        if m:
+        if m and m.group(1) != "(None)":
             result["topic"] = m.group(1)
 
     return result
@@ -123,7 +124,7 @@ async def run():
 
             client_f = asyncio.ensure_future(icb_client.read())
             input_f = asyncio.ensure_future(queue.get())
-            sleep_f = asyncio.ensure_future(asyncio.sleep(1))
+            sleep_f = asyncio.ensure_future(asyncio.sleep(2))
 
             group = ""
             topic = ""
@@ -176,7 +177,8 @@ async def run():
 
                         input_f = asyncio.ensure_future(queue.get())
                     elif f is sleep_f:
-                        sleep_f = asyncio.ensure_future(asyncio.sleep(1))
+                        model.time = beat.now()
+                        sleep_f = asyncio.ensure_future(asyncio.sleep(2))
 
 if __name__ == "__main__":
     def signal_handler(sig, frame):

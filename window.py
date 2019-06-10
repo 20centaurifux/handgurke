@@ -31,6 +31,7 @@ import ui
 class ViewModel:
     def __init__(self):
         self.__title = (False, "")
+        self.__time = (False, "")
         self.__text = (False, "")
         self.__messages = []
         self.__message_count = 0
@@ -45,9 +46,22 @@ class ViewModel:
             self.__title = (True, value)
 
     @property
+    def time_changed(self):
+        return self.__time[0]
+ 
+    @property
+    def time(self):
+        return self.__time[1]
+
+    @time.setter
+    def time(self, value):
+        if value != self.__time[1]:
+            self.__time = (True, value)
+
+    @property
     def title_changed(self):
         return self.__title[0]
- 
+
     @property
     def text(self):
         return self.__text[1]
@@ -74,7 +88,7 @@ class ViewModel:
 
     @property
     def changed(self):
-        return self.title_changed or self.text_changed or self.messages_changed
+        return self.title_changed or self.time_changed or self.text_changed or self.messages_changed
 
     def sync(self):
         self.__title = (False, self.__title[1])
@@ -297,7 +311,7 @@ class Window:
     def __refresh_top__(self, force):
         refreshed = False
 
-        if self.__model.title_changed or force:
+        if self.__model.title_changed or self.__model.time_changed or force:
             refreshed = True
 
             self.__top.clear()
@@ -306,6 +320,10 @@ class Window:
 
             if len(title) > self.__x - 16:
                 title = "%s..." % title[:self.__x - 10]
+
+            fmt = "%-" + str(self.__x - 6) + "s%5s"
+
+            title = fmt % (title, self.__model.time)
 
             self.__top.addstr(0, 0, title)
             self.__top.refresh()
