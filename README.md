@@ -1,9 +1,11 @@
 # Handgurke
 
-Handgurke is a chat client for ICB. This project is at a very early stage.
+Handgurke is a minimalistic chat client for ICB.
 
 You need at least Python 3.5 to start the client.
 
-	$ python3.5 handgurke.py -s internetcitizens.band -n foxmulder -g xfiles
+	$ python3.5 handgurke.py --server internetcitizens.band --nick foxmulder --group xfiles
+
+Enter /quit to leave the program.
 
 ![alt text](media/xterm.png "xterm")

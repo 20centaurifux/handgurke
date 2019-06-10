@@ -35,8 +35,9 @@ import window
 import client
 
 def get_opts(argv):
-    options, _ = getopt.getopt(argv, 's:p:n:g:', ['server=', 'port=', 'nick=', 'group='])
-    m = {}
+    options, _ = getopt.getopt(argv, 's:p:n:g:SN', ["server=", "port=", "nick=", "group=", "ssl", "no-verify"])
+
+    m = {"server": "internetcitizens.band", "ssl": False, "group": "", "verify_cert": True}
 
     for opt, arg in options:
         if opt in ('-s', '--server'):
@@ -47,20 +48,18 @@ def get_opts(argv):
             m["nick"] = arg
         elif opt in ('-g', '--group'):
             m["group"] = arg
+        elif opt in ('-S', '--ssl'):
+            m["ssl"] = True
+        elif opt in ('-N', '--no-verify'):
+            m["verify_cert"] = False
 
-    if not m.get("server"):
-        m["server"] = "internetcitizens.band"
-
-    if not m.get("port"):
-        m["port"] = 7326
+    if not "port" in m:
+        m["port"] = 7327 if m["ssl"] else 7326
 
     m["loginid"] = getpass.getuser()
 
     if not m.get("nick"):
         m["nick"] = m["loginid"]
-
-    if not m.get("group"):
-        m["group"] = ""
 
     return m
 
@@ -104,7 +103,7 @@ def send_line(client, line):
 async def run():
     opts = get_opts(sys.argv[1:])
 
-    icb_client = client.Client(opts["server"], opts["port"])
+    icb_client = client.Client(opts["server"], opts["port"], use_ssl=opts["ssl"], verify_cert=opts["verify_cert"])
 
     connection = await icb_client.connect()
 

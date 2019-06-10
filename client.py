@@ -24,6 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 import asyncio
+import ssl
 import ltd
 
 class ICBClientProtocol(asyncio.Protocol):
@@ -54,12 +55,20 @@ class ICBClientProtocol(asyncio.Protocol):
         self.__queue.put_nowait((type_id, payload))
 
 class Client:
-    def __init__(self, host, port):
+    def __init__(self, host, port, use_ssl=False, verify_cert=False):
         self.__host = host
         self.__port = port
         self.__queue = asyncio.Queue()
         self.__transport = None
         self.__protocol = None
+        self.__sc = None
+
+        if use_ssl:
+            self.__sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+
+            if not verify_cert:
+                self.__sc.check_hostname = False
+                self.__sc.verify_mode = ssl.CERT_NONE
 
     async def connect(self):
         loop = asyncio.get_event_loop()
@@ -68,7 +77,8 @@ class Client:
 
         self.__transport, self.__protocol = await loop.create_connection(lambda: ICBClientProtocol(on_conn_lost, self.__queue),
                                                                          self.__host,
-                                                                         self.__port)
+                                                                         self.__port,
+                                                                         ssl=self.__sc)
 
         return on_conn_lost
 
