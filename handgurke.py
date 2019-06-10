@@ -30,6 +30,7 @@ import getopt
 import getpass
 import signal
 import sys
+import curses
 import ui
 import window
 import client
@@ -116,6 +117,8 @@ async def run():
 
         w = window.Window(stdscr, model)
 
+        skip_refresh = 0
+
         with ui.KeyReader(stdscr) as queue:
             icb_client.command("echoback", "verbose")
             icb_client.command("topic")
@@ -133,7 +136,10 @@ async def run():
                 else:
                     model.title = group
 
-                w.refresh()
+                if skip_refresh == 0: # fixes resizing problems in some terminals, e.g. Terminator
+                    w.refresh()
+                else:
+                    skip_refresh -= 1
 
                 done, _ = await asyncio.wait([client_f, input_f, sleep_f], return_when=asyncio.FIRST_COMPLETED)
 
@@ -165,6 +171,9 @@ async def run():
 
                             model.text = ""
                         else:
+                            if ch == curses.KEY_RESIZE:
+                                skip_refresh = 1
+
                             w.send_key(ch)
 
                         input_f = asyncio.ensure_future(queue.get())

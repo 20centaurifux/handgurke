@@ -245,22 +245,28 @@ class Window:
             self.__refresh_lines__(force=True)
             self.__refresh_bottom__(force=True)
 
+    def hide(self):
+        self.__stdscr.clear()
+
     def refresh(self):
         force = self.__draw_screen
 
         self.__create_screen__()
 
-        refreshed = self.__refresh_top__(force)
+        if self.__x >= 20 and self.__y >= 10:
+            refreshed = self.__refresh_top__(force)
 
-        if self.__refresh_lines__(force):
-            refreshed = True
+            if self.__refresh_lines__(force):
+                refreshed = True
 
-        if refreshed:
-            force = True
+            if refreshed:
+                force = True
 
-        self.__refresh_bottom__(force)
+            self.__refresh_bottom__(force)
 
-        self.__model.sync()
+            self.__model.sync()
+        else:
+            self.__stdscr.clear()
 
     def __create_screen__(self):
         if self.__draw_screen:
