@@ -28,6 +28,7 @@ from datetime import datetime
 import re
 import getopt
 import getpass
+import signal
 import sys
 import ui
 import window
@@ -172,6 +173,11 @@ async def run():
                         sleep_f = asyncio.ensure_future(asyncio.sleep(1))
 
 if __name__ == "__main__":
+    def signal_handler(sig, frame):
+        pass
+
+    signal.signal(signal.SIGINT, signal_handler)
+
     loop = asyncio.get_event_loop()
 
     loop.run_until_complete(run())

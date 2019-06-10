@@ -43,10 +43,9 @@ class Ui:
         self.__stdscr = curses.initscr()
 
         curses.noecho()
-        curses.curs_set(True)
 
         self.__stdscr.keypad(True)
-        self.__stdscr.timeout(500)
+        self.__stdscr.nodelay(True)
 
         curses.start_color()
 
@@ -90,5 +89,5 @@ class KeyReader:
         while not self.__event.isSet():
             try:
                 c = self.__stdscr.get_wch()
-                self.__loop.call_soon_threadsafe(lambda: self.__queue.put_nowait(c))
+                self.__loop.call_soon_threadsafe(self.__queue.put_nowait, c)
             except: pass
