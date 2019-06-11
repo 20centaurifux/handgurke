@@ -12,8 +12,10 @@ SSL/TLS is also supported:
 
 Enter /quit to leave the program.
 
-Killer features
+## Killer features
+
 * color
 * displays [Swatch Internet Time](https://www.swatch.com/en\_us/internet-time/)
+* SSL/TLS support
 
 ![alt text](media/xterm.png "xterm")
