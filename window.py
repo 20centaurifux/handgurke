@@ -46,9 +46,9 @@ class ViewModel:
             self.__title = (True, value)
 
     @property
-    def time_changed(self):
-        return self.__time[0]
- 
+    def title_changed(self):
+        return self.__title[0]
+
     @property
     def time(self):
         return self.__time[1]
@@ -59,8 +59,8 @@ class ViewModel:
             self.__time = (True, value)
 
     @property
-    def title_changed(self):
-        return self.__title[0]
+    def time_changed(self):
+        return self.__time[0]
 
     @property
     def text(self):
@@ -92,6 +92,7 @@ class ViewModel:
 
     def sync(self):
         self.__title = (False, self.__title[1])
+        self.__time = (False, self.__time[1])
         self.__text = (False, self.__text[1])
         self.__message_count = len(self.__messages)
 
