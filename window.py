@@ -486,6 +486,10 @@ class Window:
 
     def __refresh_bottom__(self, force):
         if self.__model.text_changed or force:
+            if self.__text_pos + self.__text_offset > len(self.__model.text):
+                self.__text_offset = 0
+                self.__text_pos = len(self.__model.text)
+
             text = self.__model.text[self.__text_offset:]
             text = text[:self.__x - 1]
 
@@ -494,10 +498,6 @@ class Window:
             text = text + " " * (self.__x - len(text) - 1)
 
             self.__bottom.addstr(0, 0, text)
-
-            if self.__text_pos + self.__text_offset > text_len:
-                self.__text_offset = 0
-                self.__text_pos = text_len
 
             self.__bottom.move(0, self.__text_pos)
 
