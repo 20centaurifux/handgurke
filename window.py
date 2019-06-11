@@ -259,32 +259,32 @@ class Window:
             self.__refresh_lines__(force=True)
             self.__refresh_bottom__(force=True)
 
-    def hide(self):
+    def clear(self):
         self.__stdscr.clear()
+        self.__stdscr.refresh()
 
     def refresh(self):
-        force = self.__draw_screen
+        try:
+            force = self.__draw_screen
 
-        self.__create_screen__()
+            if self.__create_screen__():
+                refreshed = self.__refresh_top__(force)
+                
+                if self.__refresh_lines__(force):
+                    refreshed = True
 
-        if self.__x >= 20 and self.__y >= 10:
-            refreshed = self.__refresh_top__(force)
+                self.__refresh_bottom__(force or refreshed)
 
-            if self.__refresh_lines__(force):
-                refreshed = True
-
-            if refreshed:
-                force = True
-
-            self.__refresh_bottom__(force)
-
-            self.__model.sync()
-        else:
-            self.__stdscr.clear()
+                self.__model.sync()
+            else:
+                self.clear()
+        except:
+            self.__draw_screen = True
 
     def __create_screen__(self):
+        drawn = True
+
         if self.__draw_screen:
-            self.__stdscr.erase()
             self.__stdscr.clear()
             self.__stdscr.refresh()
 
@@ -293,20 +293,25 @@ class Window:
             self.__y = y
             self.__x = x
 
-            self.__top = curses.newwin(1, self.__x, 0, 0)
-            self.__top.bkgd(' ', curses.color_pair(ui.COLORS_TITLE_BAR))
+            if self.__x >= 20 and self.__y >= 10:
+                self.__top = curses.newwin(1, self.__x, 0, 0)
+                self.__top.bkgd(' ', curses.color_pair(ui.COLORS_TITLE_BAR))
 
-            self.__lines = curses.newpad(20, self.__x)
-            self.__lines.bkgd(' ', curses.color_pair(ui.COLORS_MESSAGE))
+                self.__lines = curses.newpad(20, self.__x)
+                self.__lines.bkgd(' ', curses.color_pair(ui.COLORS_MESSAGE))
 
-            self.__display_lines = 0
-            self.__next_line = 0
-            self.__scroll_to = 0
+                self.__display_lines = 0
+                self.__next_line = 0
+                self.__scroll_to = 0
 
-            self.__bottom = curses.newwin(1, self.__x, self.__y - 1, 0)
-            self.__bottom.bkgd(' ', curses.color_pair(ui.COLORS_INPUT))
+                self.__bottom = curses.newwin(1, self.__x, self.__y - 1, 0)
+                self.__bottom.bkgd(' ', curses.color_pair(ui.COLORS_INPUT))
 
-            self.__draw_screen = False
+                self.__draw_screen = False
+            else:
+                drawn = False
+
+        return drawn
 
     def __refresh_top__(self, force):
         refreshed = False

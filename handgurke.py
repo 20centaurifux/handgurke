@@ -107,43 +107,48 @@ async def run():
 
     icb_client = client.Client(opts["server"], opts["port"], use_ssl=opts["ssl"], verify_cert=opts["verify_cert"])
 
-    connection = await icb_client.connect()
-
-    icb_client.login(opts["loginid"], opts["nick"], opts["group"])
-
     with ui.Ui() as stdscr:
         model = window.ViewModel()
 
         w = window.Window(stdscr, model)
 
-        skip_refresh = 0
-
         with ui.KeyReader(stdscr) as queue:
-            icb_client.command("echoback", "verbose")
-            icb_client.command("topic")
-
             client_f = asyncio.ensure_future(icb_client.read())
             input_f = asyncio.ensure_future(queue.get())
-            sleep_f = asyncio.ensure_future(asyncio.sleep(2))
+            connection_f = asyncio.ensure_future(asyncio.sleep(1))
+            sleep_f = asyncio.ensure_future(asyncio.sleep(0))
 
             group = ""
             topic = ""
 
-            while not connection.done():
+            quit = False
+
+            while not quit:
                 if topic:
                     model.title = "%s: %s" % (group, topic)
                 else:
                     model.title = group
 
-                if skip_refresh == 0: # fixes resizing problems in some terminals, e.g. Terminator
-                    w.refresh()
-                else:
-                    skip_refresh -= 1
+                w.refresh()
 
-                done, _ = await asyncio.wait([client_f, input_f, sleep_f], return_when=asyncio.FIRST_COMPLETED)
+                done, _ = await asyncio.wait([client_f, input_f, sleep_f, connection_f], return_when=asyncio.FIRST_COMPLETED)
 
                 for f in done:
-                    if f is client_f:
+                    if f is connection_f:
+                        model.append_message(datetime.now(), "d", ["Connection", "Connecting to %s:%d..." % (opts["server"], opts["port"])])
+
+                        try:
+                            connection_f = await icb_client.connect()
+
+                            icb_client.login(opts["loginid"], opts["nick"], group if group else opts["group"])
+
+                            icb_client.command("echoback", "verbose")
+                            icb_client.command("w", ".")
+                        except Exception as e:
+                            model.append_message(datetime.now(), "e", [str(e)])
+
+                            connection_f = asyncio.ensure_future(asyncio.sleep(10))
+                    elif f is client_f:
                         message_type, fields = f.result()
 
                         if message_type == "l":
@@ -164,21 +169,27 @@ async def run():
                             line = model.text.strip()
 
                             if line == "/quit":
-                                icb_client.quit()
+                                try:
+                                    icb_client.quit()
+                                except: pass
+
+                                quit = True
                             else:
-                                send_line(icb_client, line)
+                                try:
+                                    send_line(icb_client, line)
+                                except: pass
 
                             model.text = ""
                         else:
                             if ch == curses.KEY_RESIZE:
-                                skip_refresh = 1
+                                w.clear()
 
                             w.send_key(ch)
 
                         input_f = asyncio.ensure_future(queue.get())
                     elif f is sleep_f:
                         model.time = beat.now()
-                        sleep_f = asyncio.ensure_future(asyncio.sleep(2))
+                        sleep_f = asyncio.ensure_future(asyncio.sleep(1))
 
 if __name__ == "__main__":
     def signal_handler(sig, frame):
@@ -189,5 +200,3 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
     loop.run_until_complete(run())
-
-    print("Connection closed.")
