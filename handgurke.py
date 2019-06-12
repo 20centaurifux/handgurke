@@ -34,6 +34,7 @@ import curses
 import ui
 import window
 import client
+import timer
 import beat
 
 def get_opts(argv):
@@ -118,6 +119,8 @@ async def run():
             connection_f = asyncio.ensure_future(asyncio.sleep(1))
             sleep_f = asyncio.ensure_future(asyncio.sleep(0))
 
+            last_login_attempt = None
+
             group = ""
             topic = ""
 
@@ -135,19 +138,25 @@ async def run():
 
                 for f in done:
                     if f is connection_f:
-                        model.append_message(datetime.now(), "d", ["Connection", "Connecting to %s:%d..." % (opts["server"], opts["port"])])
+                        if not last_login_attempt or last_login_attempt.elapsed() >= 10.0:
+                            last_login_attempt = timer.Timer()
 
-                        try:
-                            connection_f = await icb_client.connect()
+                            model.append_message(datetime.now(), "d", ["Connection", "Connecting to %s:%d..." % (opts["server"], opts["port"])])
 
-                            icb_client.login(opts["loginid"], opts["nick"], group if group else opts["group"])
+                            connection_f = None
 
-                            icb_client.command("echoback", "verbose")
-                            icb_client.command("w", ".")
-                        except Exception as e:
-                            model.append_message(datetime.now(), "e", [str(e)])
+                            try:
+                                connection_f = await icb_client.connect()
 
-                            connection_f = asyncio.ensure_future(asyncio.sleep(10))
+                                icb_client.login(opts["loginid"], opts["nick"], group if group else opts["group"])
+
+                                icb_client.command("echoback", "verbose")
+                                icb_client.command("topic")
+                            except Exception as e:
+                                model.append_message(datetime.now(), "e", [str(e)])
+
+                            if not connection_f:
+                                connection_f = asyncio.ensure_future(asyncio.sleep(10))
                     elif f is client_f:
                         message_type, fields = f.result()
 

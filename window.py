@@ -137,14 +137,14 @@ class Window:
             else:
                 key_name = curses.keyname(ord(ch)).decode("UTF-8")
 
-                if key_name == "^A":
+                if len(key_name) == 1 or (len(key_name) == 3 and key_name.startswith("M-")):
+                    self.__insert_char__(ch)
+                elif key_name == "^A":
                     self.__move_home__()
                 elif key_name == "^E":
                     self.__move_end__()
                 elif key_name == "^W":
                     self.__delete_word__()
-                elif ord(ch) != 0:
-                    self.__insert_char__(ch)
 
     def __backspace__(self):
         index = self.__text_offset + self.__text_pos
