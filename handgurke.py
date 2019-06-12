@@ -144,7 +144,6 @@ async def run():
                             model.append_message(datetime.now(), "d", ["Connection", "Connecting to %s:%d..." % (opts["server"], opts["port"])])
 
                             connection_f = None
-<<<<<<< HEAD
 
                             try:
                                 connection_f = await icb_client.connect()
@@ -154,16 +153,6 @@ async def run():
                                 icb_client.command("echoback", "verbose")
                                 icb_client.command("topic")
 
-=======
-
-                            try:
-                                connection_f = await icb_client.connect()
-
-                                icb_client.login(opts["loginid"], opts["nick"], group if group else opts["group"])
-
-                                icb_client.command("echoback", "verbose")
-                                icb_client.command("w", ".")
->>>>>>> 4cc98572ebf495e7fccb3f4b1fc86e0625fef008
                             except Exception as e:
                                 model.append_message(datetime.now(), "e", [str(e)])
 
