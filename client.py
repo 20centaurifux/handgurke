@@ -55,6 +55,8 @@ class ICBClientProtocol(asyncio.Protocol):
         self.__queue.put_nowait((type_id, payload))
 
 class Client:
+    Timeout = 90.0
+
     def __init__(self, host, port, use_ssl=False, verify_cert=False):
         self.__host = host
         self.__port = port
@@ -104,16 +106,22 @@ class Client:
 
         self.__transport.write(e.encode())
 
+    def ping(self):
+        self.__transport.write(ltd.encode_empty_cmd("l"))
+
     def pong(self):
         self.__transport.write(ltd.encode_empty_cmd("m"))
 
     async def read(self):
-        t, p = await self.__queue.get()
+        try:
+            t, p = await asyncio.wait_for(self.__queue.get(), timeout=self.Timeout)
 
-        if t == "g":
+            if t == "g":
+                self.__transport.close()
+
+            return t, [f.decode("UTF-8").rstrip(" \0") for f in ltd.split(p)]
+        except asyncio.TimeoutError:
             self.__transport.close()
-
-        return t, [f.decode("UTF-8").rstrip(" \0") for f in ltd.split(p)]
 
     def quit(self):
         self.__transport.close()

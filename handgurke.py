@@ -114,10 +114,10 @@ async def run():
         w = window.Window(stdscr, model)
 
         with ui.KeyReader(stdscr) as queue:
+            connection_f = asyncio.ensure_future(asyncio.sleep(0))
             client_f = asyncio.ensure_future(icb_client.read())
             input_f = asyncio.ensure_future(queue.get())
-            connection_f = asyncio.ensure_future(asyncio.sleep(1))
-            sleep_f = asyncio.ensure_future(asyncio.sleep(0))
+            timer_f = asyncio.ensure_future(asyncio.sleep(0))
 
             last_login_attempt = None
 
@@ -134,7 +134,7 @@ async def run():
 
                 w.refresh()
 
-                done, _ = await asyncio.wait([client_f, input_f, sleep_f, connection_f], return_when=asyncio.FIRST_COMPLETED)
+                done, _ = await asyncio.wait([client_f, input_f, timer_f, connection_f], return_when=asyncio.FIRST_COMPLETED)
 
                 for f in done:
                     if f is connection_f:
@@ -160,17 +160,22 @@ async def run():
                                 model.append_message(datetime.now(), "d", ["Connection", "Reconnecting in 10 seconds..."])
                                 connection_f = asyncio.ensure_future(asyncio.sleep(10))
                     elif f is client_f:
-                        message_type, fields = f.result()
+                        msg = f.result()
 
-                        if message_type == "l":
-                            icb_client.pong()
-                        elif message_type in "bcdefki":
-                            model.append_message(datetime.now(), message_type, fields)
+                        if msg:
+                            message_type, fields = msg
 
-                            m = parse_message(message_type, fields)
+                            if message_type == "l":
+                                icb_client.pong()
+                            elif message_type in "bcdefki":
+                                model.append_message(datetime.now(), message_type, fields)
 
-                            group = m.get("group", group)
-                            topic = m.get("topic", topic)
+                                m = parse_message(message_type, fields)
+
+                                group = m.get("group", group)
+                                topic = m.get("topic", topic)
+                        else:
+                            model.append_message(datetime.now(), "e", ["Connection timeout"])
 
                         client_f = asyncio.ensure_future(icb_client.read())
                     elif f is input_f:
@@ -198,9 +203,9 @@ async def run():
                             w.send_key(ch)
 
                         input_f = asyncio.ensure_future(queue.get())
-                    elif f is sleep_f:
+                    elif f is timer_f:
                         model.time = beat.now()
-                        sleep_f = asyncio.ensure_future(asyncio.sleep(1))
+                        timer_f = asyncio.ensure_future(asyncio.sleep(1))
 
 if __name__ == "__main__":
     def signal_handler(sig, frame):
