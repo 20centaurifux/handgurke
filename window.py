@@ -440,7 +440,7 @@ class Window:
                 if status:
                     status = " %s" % status
 
-                l = " %1s %-16s %4s %-8s %s@%s%s" % (fields[1],
+                l = " %1s %-16s %4s %-8s %s@%s%s" % ("*" if fields[1] else "",
                                                      fields[2],
                                                      self.__idle_str__(int(fields[3])),
                                                      datetime.fromtimestamp(int(fields[5])).strftime("%X"),
