@@ -38,9 +38,9 @@ import timer
 import beat
 
 def get_opts(argv):
-    options, _ = getopt.getopt(argv, 's:p:n:g:SNM', ["server=", "port=", "nick=", "group=", "ssl", "no-verify", "enable-mouse"])
+    options, _ = getopt.getopt(argv, 's:p:n:g:SNMP:', ["server=", "port=", "nick=", "group=", "ssl", "no-verify", "enable-mouse", "password="])
 
-    m = {"server": "internetcitizens.band", "ssl": False, "group": "", "verify_cert": True, "mouse": False}
+    m = {"server": "internetcitizens.band", "ssl": False, "group": "", "verify_cert": True, "password": "", "mouse": False}
 
     for opt, arg in options:
         if opt in ('-s', '--server'):
@@ -57,6 +57,8 @@ def get_opts(argv):
             m["verify_cert"] = False
         elif opt in ('-M', '--enable-mouse'):
             m["mouse"] = True
+        elif opt in ('-P', '--password'):
+            m["password"] = arg
 
     if not "port" in m:
         m["port"] = 7327 if m["ssl"] else 7326
@@ -150,7 +152,7 @@ async def run():
                             try:
                                 connection_f = await icb_client.connect()
 
-                                icb_client.login(opts["loginid"], opts["nick"], group if group else opts["group"])
+                                icb_client.login(opts["loginid"], opts["nick"], group if group else opts["group"], opts["password"])
 
                                 icb_client.command("echoback", "verbose")
                                 icb_client.command("topic")
