@@ -39,6 +39,9 @@ COLORS_IMPORTANT = 9
 COLORS_OUTPUT = 10
 
 class Ui:
+    def __init__(self, mouse=False):
+        self.__mouse = mouse
+
     def __enter__(self):
         self.__stdscr = curses.initscr()
 
@@ -59,6 +62,9 @@ class Ui:
         curses.init_pair(COLORS_ERROR, curses.COLOR_WHITE, curses.COLOR_RED)
         curses.init_pair(COLORS_IMPORTANT, curses.COLOR_WHITE, curses.COLOR_BLUE)
         curses.init_pair(COLORS_OUTPUT, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+
+        if not self.__mouse:
+            curses.mousemask(curses.ALL_MOUSE_EVENTS)
 
         return self.__stdscr
 
@@ -89,5 +95,6 @@ class KeyReader:
         while not self.__event.isSet():
             try:
                 c = self.__stdscr.get_wch()
+
                 self.__loop.call_soon_threadsafe(self.__queue.put_nowait, c)
             except: pass

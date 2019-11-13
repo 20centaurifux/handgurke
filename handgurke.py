@@ -38,9 +38,9 @@ import timer
 import beat
 
 def get_opts(argv):
-    options, _ = getopt.getopt(argv, 's:p:n:g:SN', ["server=", "port=", "nick=", "group=", "ssl", "no-verify"])
+    options, _ = getopt.getopt(argv, 's:p:n:g:SNM', ["server=", "port=", "nick=", "group=", "ssl", "no-verify", "enable-mouse"])
 
-    m = {"server": "internetcitizens.band", "ssl": False, "group": "", "verify_cert": True}
+    m = {"server": "internetcitizens.band", "ssl": False, "group": "", "verify_cert": True, "mouse": False}
 
     for opt, arg in options:
         if opt in ('-s', '--server'):
@@ -55,6 +55,8 @@ def get_opts(argv):
             m["ssl"] = True
         elif opt in ('-N', '--no-verify'):
             m["verify_cert"] = False
+        elif opt in ('-M', '--enable-mouse'):
+            m["mouse"] = True
 
     if not "port" in m:
         m["port"] = 7327 if m["ssl"] else 7326
@@ -108,7 +110,7 @@ async def run():
 
     icb_client = client.Client(opts["server"], opts["port"], use_ssl=opts["ssl"], verify_cert=opts["verify_cert"])
 
-    with ui.Ui() as stdscr:
+    with ui.Ui(mouse=opts["mouse"]) as stdscr:
         model = window.ViewModel()
 
         w = window.Window(stdscr, model)
